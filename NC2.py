@@ -57,12 +57,11 @@ train_x, valid_x, train_y, valid_y = train_test_split(x, y, test_size=0.2, strat
 # tokenize sentences
 tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_tok)
 tokenizer.fit_on_texts(train_x)
-#
+
 # convert train dataset to sequence and pad sequences
 train_x = tokenizer.texts_to_sequences(train_x)
 train_x = tf.keras.preprocessing.sequence.pad_sequences(train_x, padding=padding_type, truncating=trunc_type,
                                                         maxlen=max_length)
-#
 # convert valid dataset to sequence and pad sequences
 valid_x = tokenizer.texts_to_sequences(valid_x)
 valid_x = tf.keras.preprocessing.sequence.pad_sequences(valid_x, padding=padding_type, truncating=trunc_type,
