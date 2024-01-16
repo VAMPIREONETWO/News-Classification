@@ -10,15 +10,8 @@ from transformers.keras_callbacks import KerasMetricCallback, PushToHubCallback
 from keras.callbacks import ModelCheckpoint
 import tensorflow as tf
 from transformers import TFAutoModelForSequenceClassification
-def preprocess_function(examples):
-    return tokenizer(examples["text"], truncation=True)
 
-
-def compute_metrics(eval_pred):
-    predictions, labels = eval_pred
-    predictions = np.argmax(predictions, axis=1)
-    return accuracy.compute(predictions=predictions, references=labels)
-
+# set GPU memory, can be ignored
 using_gpu_index = 0
 gpu_list = tf.config.experimental.list_physical_devices('GPU')
 if len(gpu_list) > 0:
@@ -32,22 +25,29 @@ if len(gpu_list) > 0:
 else:
     print("Got no GPUs")
 
-# process data
+# read data
 train_df = pd.read_csv("./dataset/preprocessed_train.csv")
-train_x, train_y = train_df['content'].to_numpy(), train_df['category'].to_numpy()
-train_x, valid_x, train_y, valid_y = train_test_split(train_x, train_y, test_size=0.2, stratify=train_y)
+x, y = train_df['content'].to_numpy(), train_df['category'].to_numpy()
+
+# split data
+train_x, valid_x, train_y, valid_y = train_test_split(x, y, test_size=0.2, stratify=y)
 ds_train = Dataset.from_dict({"text": train_x, "label": train_y})
 ds_valid = Dataset.from_dict({"text": valid_x, "label": valid_y})
-
 ds = DatasetDict()
 ds["train"] = ds_train
 ds["valid"] = ds_valid
-# print(ds)
+
+
+# tokenizer
+def preprocess_function(examples):
+    return tokenizer(examples["text"], truncation=True)
+
 
 tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
 tokenized_ds = ds.map(preprocess_function, batched=True)
 data_collator = DataCollatorWithPadding(tokenizer=tokenizer, return_tensors="tf")
 
+# conversion between id and label
 category_df = pd.read_csv("dataset/category_dict.csv")
 id2label = {}
 label2id = {}
@@ -57,7 +57,16 @@ for i in range(len(category_df)):
     id2label[category_id] = category_name
     label2id[category_name] = category_id
 
+# evaluation
 accuracy = evaluate.load("accuracy")
+
+
+def compute_metrics(eval_pred):
+    predictions, labels = eval_pred
+    predictions = np.argmax(predictions, axis=1)
+    return accuracy.compute(predictions=predictions, references=labels)
+
+# model construction
 batch_size = 16
 num_epochs = 5
 batches_per_epoch = len(ds_train) // batch_size
@@ -80,6 +89,8 @@ tf_validation_set = model.prepare_tf_dataset(
     collate_fn=data_collator,
 )
 model.compile(optimizer=optimizer)
+
+# train
 metric_callback = KerasMetricCallback(metric_fn=compute_metrics, eval_dataset=tf_validation_set)
-model_checkpoint = ModelCheckpoint("NC")
-model.fit(x=tf_train_set, validation_data=tf_validation_set, epochs=3, callbacks=[metric_callback,model_checkpoint])
+model_checkpoint = ModelCheckpoint("NC", save_best_only=True)
+model.fit(x=tf_train_set, validation_data=tf_validation_set, epochs=3, callbacks=[metric_callback, model_checkpoint])
