@@ -9,15 +9,15 @@ class NCModel(keras.Model):
         super().__init__(*args, **kwargs)
 
         # preprocessing layers
+        i = Input(shape=(1), dtype=tf.string)
         tv = TextVectorization(max_tokens=vocab_size, output_mode='int', output_sequence_length=max_length)
         tv.adapt(vocab)
         self.pp = keras.Sequential(
-            layers=[Input(shape=(1,), dtype=tf.string),
-                    tv,
-                    Embedding(input_dim=vocab_size,output_dim=64,input_length=max_length)]
+            layers=[tv,Embedding(input_dim=vocab_size,output_dim=64,input_length=max_length)]
         )
         self.lstm = LSTM(32)
         self.fc = Dense(classes,activation="softmax")
+        self.call(i)
 
     def call(self, inputs, training=None, mask=None):
         outputs = self.pp(inputs)
@@ -25,7 +25,23 @@ class NCModel(keras.Model):
         outputs = self.fc(outputs)
         return outputs
 
+class NCModel2(keras.Model):
+    def __init__(self, vocab_size, max_length,classes, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
+        # preprocessing layers
+        i = Input(shape=max_length, dtype=tf.string)
+        self.embedding = Embedding(input_dim=vocab_size,output_dim=64,input_length=max_length)
+        self.lstm = LSTM(32)
+        self.fc = Dense(classes,activation="softmax")
+        self.call(i)
+
+    def call(self, inputs, training=None, mask=None):
+        outputs = self.embedding(inputs)
+        outputs = self.lstm(outputs)
+        outputs = self.fc(outputs)
+        return outputs
+# be discarded
 class CNNLayer(Layer):
     def __init__(self, filters, **kwargs):
         super().__init__(**kwargs)

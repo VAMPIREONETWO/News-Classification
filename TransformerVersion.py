@@ -1,15 +1,12 @@
-from sklearn.model_selection import train_test_split
-from transformers import AutoTokenizer
-from datasets import Dataset, DatasetDict
 import pandas as pd
 import numpy as np
-from transformers import DataCollatorWithPadding
+import tensorflow as tf
 import evaluate
-from transformers import create_optimizer
+from transformers import DataCollatorWithPadding, create_optimizer, TFAutoModelForSequenceClassification, AutoTokenizer
 from transformers.keras_callbacks import KerasMetricCallback, PushToHubCallback
 from keras.callbacks import ModelCheckpoint
-import tensorflow as tf
-from transformers import TFAutoModelForSequenceClassification
+from sklearn.model_selection import train_test_split
+from datasets import Dataset, DatasetDict
 
 # set GPU memory, can be ignored
 using_gpu_index = 0
@@ -66,6 +63,7 @@ def compute_metrics(eval_pred):
     predictions = np.argmax(predictions, axis=1)
     return accuracy.compute(predictions=predictions, references=labels)
 
+
 # model construction
 batch_size = 16
 num_epochs = 5
@@ -94,3 +92,5 @@ model.compile(optimizer=optimizer)
 metric_callback = KerasMetricCallback(metric_fn=compute_metrics, eval_dataset=tf_validation_set)
 model_checkpoint = ModelCheckpoint("NC", save_best_only=True)
 model.fit(x=tf_train_set, validation_data=tf_validation_set, epochs=3, callbacks=[metric_callback, model_checkpoint])
+
+# accuracy 0.74
