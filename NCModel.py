@@ -41,6 +41,27 @@ class NCModel2(keras.Model):
         outputs = self.lstm(outputs)
         outputs = self.fc(outputs)
         return outputs
+
+class NCModel3(keras.Model):
+    def __init__(self, vocab_size, max_length,classes, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # preprocessing layers
+        i = Input(shape=max_length, dtype=tf.string)
+        self.embedding = Embedding(input_dim=vocab_size,output_dim=64,input_length=max_length)
+        self.cnn = CNNLayer(32)
+        self.pool = GlobalAveragePooling1D()
+        self.fc = Dense(classes,activation="softmax")
+        self.call(i)
+
+    def call(self, inputs, training=None, mask=None):
+        outputs = self.embedding(inputs)
+        outputs = self.cnn(outputs)
+        outputs = self.pool(outputs)
+        outputs = self.fc(outputs)
+        return outputs
+
+
 # be discarded
 class CNNLayer(Layer):
     def __init__(self, filters, **kwargs):
