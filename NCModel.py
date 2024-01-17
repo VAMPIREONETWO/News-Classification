@@ -62,7 +62,6 @@ class NCModel3(keras.Model):
         return outputs
 
 
-# be discarded
 class CNNLayer(Layer):
     def __init__(self, filters, **kwargs):
         super().__init__(**kwargs)
